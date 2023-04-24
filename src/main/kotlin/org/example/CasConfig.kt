@@ -1,6 +1,11 @@
 package org.example
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import fi.vm.sade.java_utils.security.OpintopolkuCasAuthenticationFilter
+import fi.vm.sade.javautils.http.OphHttpClient
+import fi.vm.sade.javautils.http.OphHttpRequest
+import fi.vm.sade.javautils.http.auth.CasAuthenticator
 import org.jasig.cas.client.validation.Cas30ServiceTicketValidator
 import org.jasig.cas.client.validation.TicketValidator
 import org.springframework.context.annotation.Bean
@@ -14,6 +19,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.userdetails.*
 import org.springframework.security.web.AuthenticationEntryPoint
+import java.util.*
 
 @Configuration
 class CasConfig {
@@ -72,12 +78,39 @@ class CasConfig {
 }
 
 class CasUserDetailsService : AuthenticationUserDetailsService<CasAssertionAuthenticationToken> {
+    val callerId = "1.2.246.562.10.00000000001.example-service"
+    val authenticator = CasAuthenticator.Builder()
+        .username(System.getenv("PALVELUKAYTTAJA_USERNAME"))
+        .password(System.getenv("PALVELUKAYTTAJA_PASSWORD"))
+        .webCasUrl("https://virkailija.testiopintopolku.fi/cas")
+        .casServiceUrl("https://virkailija.testiopintopolku.fi/kayttooikeus-service/j_spring_cas_security_check")
+        .build()
+    val httpClient = OphHttpClient.Builder(callerId).authenticator(authenticator).build()
+
     override fun loadUserDetails(token: CasAssertionAuthenticationToken): UserDetails {
-        return CasUserDetails(token.name)
+        val username = token.name
+        val request = OphHttpRequest.Builder.get("https://virkailija.testiopintopolku.fi/kayttooikeus-service/kayttooikeus/kayttaja?username=$username").build()
+        val users: Optional<List<Kayttajatiedot>> = httpClient.execute<List<Kayttajatiedot>>(request)
+            .expectedStatus(200, 404)
+            .mapWith { response: String ->
+                val listType = object : TypeToken<List<Kayttajatiedot>>() {}.getType()
+                Gson().fromJson(response, listType)
+            }
+
+        when {
+            users.isEmpty() -> throw UsernameNotFoundException("User '$username' not found")
+            else -> return users.get().find { it.username == username }
+                ?: throw UsernameNotFoundException("User '$username' not found")
+        }
     }
 }
 
-class CasUserDetails(private val username: String) : UserDetails {
+data class Kayttajatiedot(
+    val oidHenkilo: String,
+    private val username: String,
+    val kayttajaTyyppi: String,
+    val organisaatiot: List<Organisaatio>,
+) : UserDetails {
     override fun getAuthorities(): MutableCollection<out GrantedAuthority> = mutableListOf()
     override fun getPassword(): String? = null
     override fun getUsername(): String = username
@@ -86,3 +119,13 @@ class CasUserDetails(private val username: String) : UserDetails {
     override fun isCredentialsNonExpired(): Boolean = true
     override fun isEnabled(): Boolean = true
 }
+
+data class Organisaatio(
+    val organisaatioOid: String,
+    val kayttooikeudet: List<Kayttooikeus>,
+)
+
+data class Kayttooikeus(
+    val palvelu: String,
+    val oikeus: String,
+)

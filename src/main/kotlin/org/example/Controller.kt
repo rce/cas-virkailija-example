@@ -9,10 +9,8 @@ import org.springframework.web.bind.annotation.RestController
 class Controller {
     @GetMapping("/foo", produces = ["application/json"])
     @ResponseBody
-    fun foo(): Foo {
-        val auth = SecurityContextHolder.getContext().authentication
-        return Foo(auth.name)
-    }
-}
+    fun foo(): Kayttajatiedot? = getKayttajatiedot()
 
-data class Foo(val name: String)
+    fun getKayttajatiedot(): Kayttajatiedot? =
+        SecurityContextHolder.getContext().authentication?.principal as? Kayttajatiedot
+}
