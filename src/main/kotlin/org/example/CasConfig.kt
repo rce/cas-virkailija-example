@@ -1,24 +1,19 @@
 package org.example
 
-import com.google.gson.Gson
 import fi.vm.sade.java_utils.security.OpintopolkuCasAuthenticationFilter
-import fi.vm.sade.javautils.httpclient.apache.ApacheOphHttpClient
-import fi.vm.sade.properties.OphProperties
 import org.jasig.cas.client.validation.Cas30ServiceTicketValidator
 import org.jasig.cas.client.validation.TicketValidator
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.cas.ServiceProperties
+import org.springframework.security.cas.authentication.CasAssertionAuthenticationToken
 import org.springframework.security.cas.authentication.CasAuthenticationProvider
 import org.springframework.security.cas.web.CasAuthenticationEntryPoint
 import org.springframework.security.cas.web.CasAuthenticationFilter
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration
 import org.springframework.security.core.GrantedAuthority
-import org.springframework.security.core.userdetails.UserDetails
-import org.springframework.security.core.userdetails.UserDetailsService
-import org.springframework.security.core.userdetails.UsernameNotFoundException
+import org.springframework.security.core.userdetails.*
 import org.springframework.security.web.AuthenticationEntryPoint
-import java.io.InputStreamReader
 
 @Configuration
 class CasConfig {
@@ -60,79 +55,34 @@ class CasConfig {
 
     @Bean
     fun casAuthenticationProvider(
-        userDetailsService: UserDetailsService,
+        userDetailsService: AuthenticationUserDetailsService<CasAssertionAuthenticationToken>,
         serviceProperties: ServiceProperties,
         ticketValidator: TicketValidator,
     ): CasAuthenticationProvider =
         CasAuthenticationProvider().apply {
-            setUserDetailsService(userDetailsService)
+            setAuthenticationUserDetailsService(userDetailsService)
             setServiceProperties(serviceProperties)
             setTicketValidator(ticketValidator)
             setKey("example-service")
         }
 
     @Bean
-    fun userDetailsService(): UserDetailsService =
-        AnotherUserDetailsService("https://$opintopolkuHostname", "1.2.246.562.10.00000000001.example-service")
+    fun userDetailsService(): AuthenticationUserDetailsService<CasAssertionAuthenticationToken> =
+        CasUserDetailsService()
 }
 
-class AnotherUserDetailsService(urlVirkailija: String, callerId: String) : UserDetailsService {
-    val httpClient = ApacheOphHttpClient.createDefaultOphClient(
-        callerId,
-        OphProperties("/oph.properties").addOverride("url-virkailija", urlVirkailija)
-    )
-
-    override fun loadUserByUsername(username: String): UserDetails {
-        return httpClient.get("kayttooikeus-service.kayttooikeus.kayttaja.byUsername", username)
-            .expectStatus(200, 404)
-            .execute { response ->
-                if (response.statusCode == 404) {
-                    throw UsernameNotFoundException(
-                        String.format(
-                            "Käyttäjää ei löytynyt käyttäjätunnuksella '%s'",
-                            username
-                        )
-                    )
-                }
-                Gson().fromJson(InputStreamReader(response.asInputStream()), Kayttaja::class.java)
-            }
-
+class CasUserDetailsService : AuthenticationUserDetailsService<CasAssertionAuthenticationToken> {
+    override fun loadUserDetails(token: CasAssertionAuthenticationToken): UserDetails {
+        return CasUserDetails(token.name)
     }
-
 }
 
-class Kayttaja(
-    val oidHenkilo: String,
-    private val username: String,
-    val kayttajaTyyppi: String,
-    val organisaatiot: List<Organisaatio>,
-) : UserDetails {
-    override fun getAuthorities(): MutableCollection<out GrantedAuthority> {
-        TODO("Not yet implemented")
-    }
-
-    override fun getPassword(): String {
-        TODO("Not yet implemented")
-    }
-
+class CasUserDetails(private val username: String) : UserDetails {
+    override fun getAuthorities(): MutableCollection<out GrantedAuthority> = mutableListOf()
+    override fun getPassword(): String? = null
     override fun getUsername(): String = username
-
-    override fun isAccountNonExpired(): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun isAccountNonLocked(): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun isCredentialsNonExpired(): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun isEnabled(): Boolean {
-        TODO("Not yet implemented")
-    }
+    override fun isAccountNonExpired(): Boolean = true
+    override fun isAccountNonLocked(): Boolean = true
+    override fun isCredentialsNonExpired(): Boolean = true
+    override fun isEnabled(): Boolean = true
 }
-
-data class Organisaatio(val organisaatioOid: String, val kayttooikeudet: List<Kayttooikeus>)
-data class Kayttooikeus(val palvelu: String, val oikeus: String)
