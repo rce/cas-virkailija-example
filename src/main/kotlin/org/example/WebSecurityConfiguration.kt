@@ -13,6 +13,8 @@ import org.springframework.security.web.SecurityFilterChain
 @Configuration
 @EnableWebSecurity
 class WebSecurityConfiguration {
+    val allowLogoutUsingHttpGet = true
+
     @Bean
     fun singleSignOutFilter(): SingleSignOutFilter =
         SingleSignOutFilter().apply {
@@ -26,7 +28,14 @@ class WebSecurityConfiguration {
         singleSignOutFilter: SingleSignOutFilter,
         casAuthenticationFilter: CasAuthenticationFilter,
     ): SecurityFilterChain {
+        if (allowLogoutUsingHttpGet) { http.csrf().disable() }
+
         http
+            .logout { logout ->
+                logout.logoutUrl("/logout")
+                logout.logoutSuccessUrl("https://virkailija.testiopintopolku.fi/cas/logout")
+                //logout.invalidateHttpSession(true)
+            }
             .authorizeHttpRequests()
             .anyRequest().authenticated()
             .and()
