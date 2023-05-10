@@ -1,6 +1,5 @@
 package org.example.cas
 
-import org.apache.commons.lang.StringUtils
 import org.apache.http.Consts
 import org.apache.http.client.entity.UrlEncodedFormEntity
 import org.apache.http.client.methods.HttpPost
@@ -57,7 +56,7 @@ object CasClient {
                      val locationHeaders = response.getHeaders("Location")
                      if (locationHeaders != null && locationHeaders.size == 1) {
                          val responseLocation = locationHeaders[0]!!.value
-                         val ticketGrantingTicket = StringUtils.substringAfterLast(responseLocation, "/")
+                         val ticketGrantingTicket = responseLocation.substringAfterLast("/")
                          return@use ticketGrantingTicket
                      }
                      throw RuntimeException("Successful ticket granting request, but no ticket found! server: $server, user: $username")
