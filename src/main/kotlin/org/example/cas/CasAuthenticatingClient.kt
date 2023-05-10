@@ -24,8 +24,11 @@ abstract class CasAuthenticatingClient(val targetServiceUrl: String) {
     val authenticatedHttpClient: CloseableHttpClient = HttpClients.custom().build()
 
     protected fun executeRequest(req: HttpRequestBase, context: HttpClientContext): CloseableHttpResponse {
-        log.info("Executing request")
         req.setHeader(BasicHeader(CasClient.CAS_SECURITY_TICKET, getTicket(context)))
+        req.setHeader("Caller-Id", "1.2.246.562.10.00000000001.rce-example")
+        req.setHeader("CSRF", "CSRF")
+        req.setHeader("Cookie", "CSRF=CSRF")
+
         val response = authenticatedHttpClient.execute(req, httpContext)
         return if (!isUnauthorized(response)) {
             response

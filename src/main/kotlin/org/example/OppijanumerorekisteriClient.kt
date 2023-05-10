@@ -3,6 +3,9 @@ package org.example
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.http.client.methods.HttpGet
+import org.apache.http.client.methods.HttpPost
+import org.apache.http.entity.ContentType
+import org.apache.http.entity.StringEntity
 import org.apache.http.util.EntityUtils
 import org.example.cas.CasAuthenticatingClient
 import org.example.cas.CasConfig
@@ -15,12 +18,26 @@ class OppijanumerorekisteriClient : CasAuthenticatingClient(
 )  {
     override val log = Logger.getLogger(this.javaClass.name)
 
+    val baseUrl = "https://${CasConfig.virkailijaHost}/oppijanumerorekisteri-service"
+
     fun findByOid(oid: String): Henkilo {
-        val req = HttpGet("https://${CasConfig.virkailijaHost}/oppijanumerorekisteri-service/henkilo/$oid")
+        val req = HttpGet("${baseUrl}/henkilo/$oid")
         return executeRequest(req, httpContext).use { response ->
             val body = EntityUtils.toString(response.entity)
-            log.info(body)
+            log.info("body: ${body}")
             return@use mapper.readValue(body)
+        }
+    }
+
+    data class YleistunnisteHaeRequest(val etunimet: String, val hetu: String, val kutsumanimi: String, val sukunimi: String)
+    fun yleistunnisteHae(requestBody: YleistunnisteHaeRequest): String {
+        val json = mapper.writeValueAsString(requestBody)
+        val req = HttpPost("${baseUrl}/yleistunniste/hae")
+        req.entity = StringEntity(json, ContentType.APPLICATION_JSON)
+        return executeRequest(req, httpContext).use { response ->
+            val body = EntityUtils.toString(response.entity)
+            log.info("body: ${body}")
+            return@use body
         }
     }
 }
