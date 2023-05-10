@@ -20,7 +20,7 @@ class KayttooikeusClient : CasAuthenticatingClient(
         val req = HttpGet("https://${CasConfig.virkailijaHost}/kayttooikeus-service/kayttooikeus/kayttaja?username=$username")
         return executeRequest(req, httpContext).use { response ->
             val body = EntityUtils.toString(response.entity)
-            println(body)
+            log.info(body)
             return@use mapper.readValue(body)
         }
     }
