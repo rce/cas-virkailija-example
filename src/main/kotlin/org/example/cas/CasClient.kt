@@ -23,7 +23,7 @@ object CasClient {
     private fun getServiceTicket(
         server: String,
         username: String,
-        password: String?,
+        password: String,
         service: String,
     ): String {
         val ticketGrantingTicket = getTicketGrantingTicket(server, username, password)
@@ -41,7 +41,7 @@ object CasClient {
     private fun getTicketGrantingTicket(
         server: String,
         username: String,
-        password: String?,
+        password: String,
     ): String {
          val req = HttpPost(server)
          req.entity = UrlEncodedFormEntity(
