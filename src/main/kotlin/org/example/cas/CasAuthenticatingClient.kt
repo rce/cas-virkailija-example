@@ -9,6 +9,7 @@ import org.apache.http.impl.client.BasicCookieStore
 import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.message.BasicHeader
+import org.example.Config
 import java.util.logging.Logger
 
 abstract class CasAuthenticatingClient(val targetServiceUrl: String) {
@@ -51,7 +52,12 @@ abstract class CasAuthenticatingClient(val targetServiceUrl: String) {
         }
 
     private fun refreshCasTicket(context: HttpClientContext): String {
-        val ticket = CasClient.getTicket("https://${CasConfig.virkailijaHost}/cas", CasConfig.username, CasConfig.password, targetServiceUrl)
+        val ticket = CasClient.getTicket(
+            "https://${Config.virkailijaHost}/cas",
+            Config.palvelukayttajaUsername,
+            Config.palvelukayttajaPassword,
+            targetServiceUrl,
+        )
         context.setAttribute("cas_ticket", ticket)
         return ticket
     }

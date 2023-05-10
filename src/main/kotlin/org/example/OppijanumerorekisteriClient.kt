@@ -8,20 +8,17 @@ import org.apache.http.entity.ContentType
 import org.apache.http.entity.StringEntity
 import org.apache.http.util.EntityUtils
 import org.example.cas.CasAuthenticatingClient
-import org.example.cas.CasConfig
 import org.springframework.stereotype.Component
 import java.util.logging.Logger
 
 @Component
 class OppijanumerorekisteriClient : CasAuthenticatingClient(
-    targetServiceUrl = "https://${CasConfig.virkailijaHost}/oppijanumerorekisteri-service"
+    targetServiceUrl = "https://${Config.virkailijaHost}/oppijanumerorekisteri-service"
 )  {
     override val log = Logger.getLogger(this.javaClass.name)
 
-    val baseUrl = "https://${CasConfig.virkailijaHost}/oppijanumerorekisteri-service"
-
     fun findByOid(oid: String): Henkilo {
-        val req = HttpGet("${baseUrl}/henkilo/$oid")
+        val req = HttpGet("${targetServiceUrl}/henkilo/$oid")
         return executeRequest(req, httpContext).use { response ->
             val body = EntityUtils.toString(response.entity)
             log.info("body: ${body}")
@@ -32,7 +29,7 @@ class OppijanumerorekisteriClient : CasAuthenticatingClient(
     data class YleistunnisteHaeRequest(val etunimet: String, val hetu: String, val kutsumanimi: String, val sukunimi: String)
     fun yleistunnisteHae(requestBody: YleistunnisteHaeRequest): String {
         val json = mapper.writeValueAsString(requestBody)
-        val req = HttpPost("${baseUrl}/yleistunniste/hae")
+        val req = HttpPost("${targetServiceUrl}/yleistunniste/hae")
         req.entity = StringEntity(json, ContentType.APPLICATION_JSON)
         return executeRequest(req, httpContext).use { response ->
             val body = EntityUtils.toString(response.entity)

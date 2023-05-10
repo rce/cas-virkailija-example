@@ -1,6 +1,7 @@
 package org.example.cas
 
 import fi.vm.sade.java_utils.security.OpintopolkuCasAuthenticationFilter
+import org.example.Config
 import org.jasig.cas.client.validation.Cas30ServiceTicketValidator
 import org.jasig.cas.client.validation.TicketValidator
 import org.springframework.context.annotation.Bean
@@ -16,18 +17,10 @@ import org.springframework.security.web.AuthenticationEntryPoint
 
 @Configuration
 class CasConfig {
-    companion object {
-        val username = System.getenv("PALVELUKAYTTAJA_USERNAME")
-        val password = System.getenv("PALVELUKAYTTAJA_PASSWORD")
-        val appUrl = "http://localhost:8080"
-        val virkailijaHost = "virkailija.testiopintopolku.fi"
-    }
-
-
     @Bean
     fun serviceProperties(): ServiceProperties =
         ServiceProperties().apply {
-            service = "$appUrl/j_spring_cas_security_check"
+            service = "${Config.appUrl}/j_spring_cas_security_check"
             isSendRenew = false
             isAuthenticateAllArtifacts = true
         }
@@ -45,14 +38,14 @@ class CasConfig {
 
     @Bean
     fun ticketValidator(): TicketValidator =
-        Cas30ServiceTicketValidator("https://$virkailijaHost/cas");
+        Cas30ServiceTicketValidator("https://${Config.virkailijaHost}/cas");
 
     @Bean
     fun authenticationEntryPoint(
         serviceProperties: ServiceProperties,
     ): AuthenticationEntryPoint {
         val entryPoint = CasAuthenticationEntryPoint()
-        entryPoint.loginUrl = "https://$virkailijaHost/cas/login"
+        entryPoint.loginUrl = "https://${Config.virkailijaHost}/cas/login"
         entryPoint.serviceProperties = serviceProperties
         return entryPoint
     }
